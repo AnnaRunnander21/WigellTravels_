@@ -1,0 +1,32 @@
+server:
+  port: 8585
+
+spring:
+  application:
+    name: wigell-travels
+
+# läses från env i docker-compose; fallback för lokal körning
+pricing:
+  base-url: ${PRICING_BASE_URL:http://localhost:8787}
+  username: ${PRICING_USERNAME:Courtney}
+  password: ${PRICING_PASSWORD:Love}
+
+
+
+
+#server:
+#  port: 4545
+#
+#spring:
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: wigell-travels
+#          uri: http://wigell-travels:8585
+#          predicates:
+#            - Path=/api/wigelltravels/**
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: health,info,gateway
