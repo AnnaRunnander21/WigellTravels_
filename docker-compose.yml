@@ -1,0 +1,92 @@
+networks:
+  Wigell: {}
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: wigell_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: wigell_travels
+      MYSQL_USER: wigelluser
+      MYSQL_PASSWORD: wigellpass
+      TZ: Europe/Stockholm
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - Wigell
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  wigell-travels:
+    image: wigell-travels:latest
+    container_name: wigell_travels_app
+    depends_on:
+      mysql:
+        condition: service_healthy
+      pricecalculator:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://wigell_mysql:3306/wigell_travels?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Europe/Stockholm
+      SPRING_DATASOURCE_USERNAME: wigelluser
+      SPRING_DATASOURCE_PASSWORD: wigellpass
+
+
+      PRICING_BASE_URL: http://pricecalculator:8787
+
+      PRICING_USERNAME: Courtney
+      PRICING_PASSWORD: Love
+
+      TZ: Europe/Stockholm
+    ports:
+      - "8585:8585"
+    networks:
+      - Wigell
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8585/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  pricecalculator:
+    image: pricecalculator:latest
+    container_name: pricecalculator_service
+    environment:
+      TZ: Europe/Stockholm
+    ports:
+      - "8787:8787"
+    networks:
+      - Wigell
+    healthcheck:
+
+      test: ["CMD", "curl", "-f", "-u", "Courtney:Love", "http://localhost:8787/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  gateway:
+    image: wigell-gateway:latest
+    container_name: wigell_gateway
+    depends_on:
+      wigell-travels:
+        condition: service_started
+      pricecalculator:
+        condition: service_started
+    environment:
+      TZ: Europe/Stockholm
+    ports:
+      - "4545:4545"
+    networks:
+      - Wigell
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
